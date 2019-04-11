@@ -60,9 +60,9 @@ FortranCInterface_VERIFY()
 # Use preprocessor and 8-byte reals
 if(CMAKE_Fortran_COMPILER_ID STREQUAL GNU)
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8 -fdefault-double-8 -cpp")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy")
   else()
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8 -fdefault-double-8 -cpp -mcmodel=large")
+      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8 -fdefault-double-8 -cpp -mcmodel=large -std=legacy")
   endif()
 elseif(CMAKE_Fortran_COMPILER_ID STREQUAL PGI)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -Mpreprocess -mcmodel=medium")
@@ -94,7 +94,7 @@ endif()
 # gslib
 # =============================================================================
 
-add_subdirectory(3rd_party/gslib/gslib-1.0.1/)
+add_subdirectory(3rd_party/gslib/gslib/)
 
 # =============================================================================
 # Nek5000 Sources and Targets
