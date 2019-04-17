@@ -165,7 +165,6 @@ set(CORE_SOURCES
     core/navier8.f
     core/nek_comm.c
     core/nek_interface.f
-    core/nek_interface_types.f
     core/papi.f
     core/perturb.f
     core/plan4.f

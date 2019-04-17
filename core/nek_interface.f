@@ -1,7 +1,6 @@
       !> Subroutines exposed to C/C++ driver, which use the ISO_C_BINDING module
       module nek_interface
         use, intrinsic :: ISO_C_BINDING
-        use :: nek_interface_types
         implicit none
 
         include 'SIZE'
@@ -28,38 +27,35 @@
         !! \param[out] centroid The dimensionless coordinates of the local element's centroid
         !! \result Error code
         !! \todo Only works for 3D
-        function nek_get_local_elem_centroid(local_elem, centroid)
+        function nek_get_local_elem_centroid(local_elem, x, y, z)
      &      result(ierr) bind(C)
 
           integer(C_INT), intent(in), value :: local_elem
-          type(Position), intent(out) :: centroid
+          real(C_DOUBLE), intent(out) :: x, y, z
           integer(C_INT) :: ierr
           integer :: i, j, k
           real(C_DOUBLE) :: mass
 
           if (local_elem <= nelt) then
-            centroid%x = 0.
-            centroid%y = 0.
-            centroid%z = 0.
+            x = 0.
+            y = 0.
+            z = 0.
             mass = 0.
 
             do k = 1, nz1
               do j = 1, ny1
                 do i = 1, nx1
-                  centroid%x = centroid%x +
-     &                      xm1(i,j,k,local_elem)*bm1(i,j,k,local_elem)
-                  centroid%y = centroid%y +
-     &                      ym1(i,j,k,local_elem)*bm1(i,j,k,local_elem)
-                  centroid%z = centroid%z +
-     &                      zm1(i,j,k,local_elem)*bm1(i,j,k,local_elem)
+                  x = x + xm1(i,j,k,local_elem)*bm1(i,j,k,local_elem)
+                  y = y + ym1(i,j,k,local_elem)*bm1(i,j,k,local_elem)
+                  z = z + zm1(i,j,k,local_elem)*bm1(i,j,k,local_elem)
                   mass = mass + bm1(i,j,k,local_elem)
                 end do
               end do
             end do
 
-            centroid%x = centroid%x / mass
-            centroid%y = centroid%y / mass
-            centroid%z = centroid%z / mass
+            x = x / mass
+            y = y / mass
+            z = z / mass
 
             ierr = 0
           else
@@ -76,10 +72,10 @@
         !! \param[out] centroid The dimensionless coordinates of the global element's centroid
         !! \result Error code
         !! \todo Only works for 3D
-        function nek_get_global_elem_centroid(global_elem, centroid)
+        function nek_get_global_elem_centroid(global_elem, x, y, z)
      $      result(ierr) bind(C)
           integer(C_INT), intent(in), value :: global_elem
-          type(Position), intent(out) :: centroid
+          real(C_DOUBLE), intent(out) :: x, y, z
           integer(C_INT) :: ierr
           integer :: i, j, k
           real(C_DOUBLE) :: mass
@@ -87,7 +83,7 @@
 
           if (nek_global_elem_is_in_rank(global_elem, nid) == 0) then
             local_elem = gllel(global_elem)
-            ierr = nek_get_local_elem_centroid(local_elem, centroid)
+            ierr = nek_get_local_elem_centroid(local_elem, x, y, z)
           else
             ierr = 1
           end if
