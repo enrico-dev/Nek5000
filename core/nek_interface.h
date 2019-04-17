@@ -1,7 +1,7 @@
 //! \file nek_interface.h
 //! Functions for accessing Nek5000 routines and data structures
-#ifndef ENRICO_NEK_INTERFACE_H
-#define ENRICO_NEK_INTERFACE_H
+#ifndef NEK5000_NEK_INTERFACE_H
+#define NEK5000_NEK_INTERFACE_H
 
 #include "nek_mangling.h"
 
@@ -157,4 +157,4 @@ void nek_step();
 void nek_finalize_step();
 };
 
-#endif // ENRICO_NEK_INTERFACE_H
+#endif // NEK5000_NEK_INTERFACE_H
