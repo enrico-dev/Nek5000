@@ -36,7 +36,9 @@ void nek_reset_counters();
 //! conversions.
 //!
 //! \param[in] global_elem A global element ID
-//! \param[out] centroid The **dimensionless* position of the global element's centroid
+//! \param[out] x x-coord of the global element's centroid
+//! \param[out] y y-coord of the global element's centroid
+//! \param[out] z z-coord of the global element's centroid
 //! \return Error value
 int nek_get_global_elem_centroid(int global_elem, double* x, double* y, double* z);
 
@@ -47,8 +49,9 @@ int nek_get_global_elem_centroid(int global_elem, double* x, double* y, double* 
 //! conversions.
 //!
 //! \param[in] local_elem A local element ID
-//! \param[out] centroid The **dimensionless* position of the local element's centroid
-//! \return Error value
+//! \param[out] x x-coord of the local element's centroid
+//! \param[out] y y-coord of the local element's centroid
+//! \param[out] z z-coord of the local element's centroid
 int nek_get_local_elem_centroid(int local_elem, double* x, double* y, double* z);
 
 //! Get the volume of a local element

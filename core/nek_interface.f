@@ -24,7 +24,9 @@
         !! setup of the Nek5000
         !!
         !! \param[in] local_elem A local element ID
-        !! \param[out] centroid The dimensionless coordinates of the local element's centroid
+        !! \param[out] x x-coord of the local element's centroid
+        !! \param[out] y y-coord of the local element's centroid
+        !! \param[out] z z-coord of the local element's centroid
         !! \result Error code
         !! \todo Only works for 3D
         function nek_get_local_elem_centroid(local_elem, x, y, z)
@@ -69,7 +71,9 @@
         !! setup of the Nek5000
         !!
         !! \param[in] global_elem A global element ID
-        !! \param[out] centroid The dimensionless coordinates of the global element's centroid
+        !! \param[out] x x-coord of the global element's centroid
+        !! \param[out] y y-coord of the global element's centroid
+        !! \param[out] z z-coord of the global element's centroid
         !! \result Error code
         !! \todo Only works for 3D
         function nek_get_global_elem_centroid(global_elem, x, y, z)
