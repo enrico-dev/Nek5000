@@ -40,7 +40,7 @@ void nek_reset_counters();
 //! \param[out] y y-coord of the global element's centroid
 //! \param[out] z z-coord of the global element's centroid
 //! \return Error value
-int nek_get_global_elem_centroid(int global_elem, double* x, double* y, double* z);
+int nek_get_global_elem_centroid(int32_t global_elem, double* x, double* y, double* z);
 
 //! Get the coordinates of a local element's centroid
 //!
@@ -52,7 +52,7 @@ int nek_get_global_elem_centroid(int global_elem, double* x, double* y, double* 
 //! \param[out] x x-coord of the local element's centroid
 //! \param[out] y y-coord of the local element's centroid
 //! \param[out] z z-coord of the local element's centroid
-int nek_get_local_elem_centroid(int local_elem, double* x, double* y, double* z);
+int nek_get_local_elem_centroid(int32_t local_elem, double* x, double* y, double* z);
 
 //! Get the volume of a local element
 //!
@@ -62,7 +62,7 @@ int nek_get_local_elem_centroid(int local_elem, double* x, double* y, double* z)
 //! \param local_elem  A local element ID
 //! \param volume  The **dimensionless** volume of the local element
 //! \return  Error value
-int nek_get_local_elem_volume(int local_elem, double* volume);
+int nek_get_local_elem_volume(int32_t local_elem, double* volume);
 
 //! Get the volume-averaged temperature of a local element
 //!
@@ -73,17 +73,17 @@ int nek_get_local_elem_volume(int local_elem, double* volume);
 //! \param local_elem  A local element ID
 //! \param temperature  The **dimensionless** volume-averaged temperature of the local
 //! element \return  Error value
-int nek_get_local_elem_temperature(int local_elem, double* temperature);
+int nek_get_local_elem_temperature(int32_t local_elem, double* temperature);
 
 //! Get the global element ID for a given local element
 //! \param local_elem  A local element ID
 //! \return The corresponding global element ID
-int nek_get_global_elem(int local_elem);
+int32_t nek_get_global_elem(int32_t local_elem);
 
 //! Get the local element ID for a given global element
 //! \param global_elem  A global element ID
 //! \return The corresponding local element ID
-int nek_get_local_elem(int global_elem);
+int32_t nek_get_local_elem(int32_t global_elem);
 
 //! Get lelg, the maximum number of global elements
 //!
@@ -92,7 +92,7 @@ int nek_get_local_elem(int global_elem);
 //! (nelg) for their problem, which must be <= lelg.
 //!
 //! \return  The upper bound on number of global elements
-int nek_get_lelg();
+int32_t nek_get_lelg();
 
 //! Get lelt, the maximum number of local elements
 //!
@@ -101,7 +101,7 @@ int nek_get_lelg();
 //! (nelg) for their problem, which must be <= lelt.
 //!
 //! \return  The upper bound on number of local elements
-int nek_get_lelt();
+int32_t nek_get_lelt();
 
 //! Get lx1, the maximum number of GLL gridpoints in the x-direction
 //!
@@ -110,32 +110,32 @@ int nek_get_lelt();
 //! gridpoints for their problem, which must be <= lx1.
 //!
 //! \return  The upper bound on number of GLL gridpoints in the x-direction
-int nek_get_lx1();
+int32_t nek_get_lx1();
 
 //! Get lelt, the number of local elements
 //!
 //! \return  The number of local elements
-int nek_get_nelt();
+int32_t nek_get_nelt();
 
 //! Get nelgt, the number of global elements
 //! \return  nelgt The number of global elements
-int nek_get_nelgt();
+int32_t nek_get_nelgt();
 
 //! Return true if a global element is in a given MPI rank
 //! \param A global element ID
 //! \param An MPI rank
 //! \return True if the global element ID is in the given rank
-int nek_global_elem_is_in_rank(int global_elem, int rank);
+int nek_global_elem_is_in_rank(int32_t global_elem, int rank);
 
 //! Return true if a local element is in the fluid region
 //! \param local_elem  A local element ID
 //! \return 1 if the local element is in fluid; 0 otherwise
-int nek_local_elem_is_in_fluid(int local_elem);
+int nek_local_elem_is_in_fluid(int32_t local_elem);
 
 //! Return true if a global element is in the fluid region
 //! \param global_elem  A global element ID
 //! \return 1 if the global element is in fluid; 0 otherwise
-int nek_global_elem_is_in_fluid(int global_elem);
+int nek_global_elem_is_in_fluid(int32_t global_elem);
 
 //! Set the heat source for a given local element
 //!
@@ -145,7 +145,7 @@ int nek_global_elem_is_in_fluid(int global_elem);
 //! \param local_elem A local element ID
 //! \param heat A heat source term
 //! \return Error code
-int nek_set_heat_source(int local_elem, double heat);
+int nek_set_heat_source(int32_t local_elem, double heat);
 
 //! Unimplemented.  C2F_nek_init is used instead.
 void nek_init_step();
