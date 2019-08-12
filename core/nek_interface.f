@@ -31,11 +31,10 @@
         !! \todo Only works for 3D
         function nek_get_local_elem_centroid(local_elem, x, y, z)
      &      result(ierr) bind(C)
-
-          integer(C_INT), intent(in), value :: local_elem
+          integer(C_PTRDIFF_T), intent(in), value :: local_elem
           real(C_DOUBLE), intent(out) :: x, y, z
           integer(C_INT) :: ierr
-          integer :: i, j, k
+          integer :: i, j, k, e
           real(C_DOUBLE) :: mass
 
           if (local_elem <= nelt) then
@@ -44,13 +43,14 @@
             z = 0.
             mass = 0.
 
+            e = int(local_elem)
             do k = 1, nz1
               do j = 1, ny1
                 do i = 1, nx1
-                  x = x + xm1(i,j,k,local_elem)*bm1(i,j,k,local_elem)
-                  y = y + ym1(i,j,k,local_elem)*bm1(i,j,k,local_elem)
-                  z = z + zm1(i,j,k,local_elem)*bm1(i,j,k,local_elem)
-                  mass = mass + bm1(i,j,k,local_elem)
+                  x = x + xm1(i,j,k,e)*bm1(i,j,k,e)
+                  y = y + ym1(i,j,k,e)*bm1(i,j,k,e)
+                  z = z + zm1(i,j,k,e)*bm1(i,j,k,e)
+                  mass = mass + bm1(i,j,k,e)
                 end do
               end do
             end do
@@ -78,12 +78,12 @@
         !! \todo Only works for 3D
         function nek_get_global_elem_centroid(global_elem, x, y, z)
      $      result(ierr) bind(C)
-          integer(C_INT), intent(in), value :: global_elem
+          integer(C_PTRDIFF_T), intent(in), value :: global_elem
           real(C_DOUBLE), intent(out) :: x, y, z
           integer(C_INT) :: ierr
           integer :: i, j, k
           real(C_DOUBLE) :: mass
-          integer(C_INT) :: local_elem
+          integer(C_PTRDIFF_T) :: local_elem
 
           if (nek_global_elem_is_in_rank(global_elem, nid) == 0) then
             local_elem = gllel(global_elem)
@@ -99,9 +99,10 @@
         !> \return 1 if the global element ID is in the given rank; 0 otherwise
         function nek_global_elem_is_in_rank(global_elem, rank)
      $      result(result) bind(C)
-          integer (C_INT), value :: global_elem, rank
+          integer (C_PTRDIFF_T), value :: global_elem
+          integer (C_INT), value :: rank
           integer(C_INT) :: result
-          if (rank == gllnid(global_elem)) then
+          if (rank == gllnid(int(global_elem))) then
             result = 1
           else
             result = 0
@@ -113,8 +114,8 @@
         !> \return 1 if the local element is in fluid; 0 otherwise
         function nek_local_elem_is_in_fluid(local_elem)
      &      result(result) bind(C)
-          integer(C_INT), value :: local_elem
-          integer(C_INT) :: result, global_elem
+          integer(C_PTRDIFF_T), value :: local_elem
+          integer(C_PTRDIFF_T) :: result, global_elem
           global_elem = lglel(local_elem)
           result = nek_global_elem_is_in_fluid(global_elem)
         end function nek_local_elem_is_in_fluid
@@ -124,7 +125,7 @@
         !> \return 1 if the global element is in fluid; 0 otherwise
         function nek_global_elem_is_in_fluid(global_elem)
      &      result(result) bind(C)
-          integer (C_INT), value :: global_elem
+          integer (C_PTRDIFF_T), value :: global_elem
           integer (C_INT) :: result
           if (global_elem <= nelgv) then
             result = 1
@@ -143,13 +144,13 @@
         !! \result Error code
         function nek_get_local_elem_volume(local_elem, volume)
      &      result(ierr) bind(C)
-          integer(C_INT), intent(in), value :: local_elem
+          integer(C_PTRDIFF_T), intent(in), value :: local_elem
           real(C_DOUBLE), intent(out) :: volume
           integer(C_INT) :: ierr
           integer :: k
 
           if (local_elem <= nelt) then
-            volume = sum(bm1(1:nx1,1:ny1,1:nz1,local_elem))
+            volume = sum(bm1(1:nx1,1:ny1,1:nz1,int(local_elem)))
             ierr = 0
           else
             ierr = 1
@@ -158,16 +159,17 @@
 
         function nek_get_local_elem_temperature(local_elem, temperature)
      &      result(ierr) bind(C)
-          integer(C_INT), intent(in), value :: local_elem
+          integer(C_PTRDIFF_T), intent(in), value :: local_elem
           real(C_DOUBLE), intent(out) :: temperature
-          integer(C_INT) :: ierr
+          integer(C_INT) :: ierr, e
 
           if (local_elem <= nelt) then
-            temperature = sum(vtrans(1:nx1,1:ny1,1:nz1,local_elem,2)
-     &                        * bm1(1:nx1,1:ny1,1:nz1,local_elem)
-     &                        * t(1:nx1,1:ny1,1:nz1,local_elem,1))
-     &                    / sum(vtrans(1:nx1,1:ny1,1:nz1,local_elem,2)
-     &                          * bm1(1:nx1,1:ny1,1:nz1,local_elem))
+            e = int(local_elem)
+            temperature = sum(vtrans(1:nx1,1:ny1,1:nz1,e,2)
+     &                        * bm1(1:nx1,1:ny1,1:nz1,e)
+     &                        * t(1:nx1,1:ny1,1:nz1,e,1))
+     &                    / sum(vtrans(1:nx1,1:ny1,1:nz1,e,2)
+     &                          * bm1(1:nx1,1:ny1,1:nz1,e))
             ierr = 0
           else
             ierr = 1
@@ -180,9 +182,9 @@
         !> \result The corresponding global element ID
         function nek_get_global_elem(local_elem)
      &      result(global_elem) bind(C)
-          integer(C_INT), value :: local_elem
-          integer(C_INT) :: global_elem
-          global_elem = lglel(local_elem)
+          integer(C_PTRDIFF_T), value :: local_elem
+          integer(C_PTRDIFF_T) :: global_elem
+          global_elem = lglel(int(local_elem))
         end function
 
         !> Get the local element ID for a given global element
@@ -191,38 +193,38 @@
         !> \result The corresponding local element ID
         function nek_get_local_elem(global_elem)
      &      result(local_elem) bind(C)
-          integer(C_INT), value :: global_elem
-          integer(C_INT) :: local_elem
-          local_elem = gllel(global_elem)
+          integer(C_PTRDIFF_T), value :: global_elem
+          integer(C_PTRDIFF_T) :: local_elem
+          local_elem = gllel(int(global_elem))
         end function
 
         !> Get value of lelg (max number of global elements)
         function nek_get_lelg() result(c_lelg) bind(C)
-          integer(C_INT) :: c_lelg
+          integer(C_SIZE_T) :: c_lelg
           c_lelg = lelg
         end function nek_get_lelg
 
         !> Get value of lelt (max number of local elements)
         function nek_get_lelt() result(c_lelt) bind(C)
-          integer(C_INT) :: c_lelt
+          integer(C_SIZE_T) :: c_lelt
           c_lelt = lelt
         end function nek_get_lelt
 
         !> Get value of lx1 (number of GLL gridpoints in x-dimension)
         function nek_get_lx1() result(c_lx1) bind(C)
-          integer(C_INT) :: c_lx1
+          integer(C_SIZE_T) :: c_lx1
           c_lx1 = lx1
         end function nek_get_lx1
 
         !> Get value of nelgt (number of global elements)
         function nek_get_nelgt() result(c_nelgt) bind(C)
-          integer(C_INT) :: c_nelgt
+          integer(C_SIZE_T) :: c_nelgt
           c_nelgt = nelgt
         end function nek_get_nelgt
 
         !> Get value of nelt (number of local elements)
         function nek_get_nelt() result(c_nelt) bind(C)
-          integer(C_INT) :: c_nelt
+          integer(C_SIZE_T) :: c_nelt
           c_nelt = nelt
         end function nek_get_nelt
 
@@ -237,12 +239,12 @@
         !! \return Error code
         function nek_set_heat_source(local_elem, heat)
      &      result(ierr) bind(C)
-          integer(C_INT), value :: local_elem
+          integer(C_PTRDIFF_T), value :: local_elem
           real(C_DOUBLE), value :: heat
           integer(C_INT) :: ierr
           include 'STREAM'
           if (local_elem <= nelt) then
-            localq(local_elem) = heat
+            localq(int(local_elem)) = heat
             ierr = 0
           else
             ierr = 1
