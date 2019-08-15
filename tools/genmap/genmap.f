@@ -63,12 +63,12 @@ c     read nekton .rea file and make a .map file
      $               , w3   (lpts) , w4   (lpts)
      $               , w5   (lpts)
 
-      real        w14(4*lpts)
+      real        w14(4,lpts)
       equivalence (w1,w14)
 
-      common /arrayr/  dx(4*lpts)
+      common /arrayr/  dx(4,lpts)
 
-      common /carrayr/ bc(5*6*lelm)
+      common /carrayr/ bc(5,6,lelm)
       real*8 bc
       common /carrayc/ cbc(6,lelm)
       character*3      cbc
@@ -104,7 +104,7 @@ c                                    irnk is # unique points
             endif
          enddo 
          write(6,*) "WARNING:Missing Face Connection Not Resolved"
-         call exit
+         call exitt(1) 
       endif
   15  continue
 
@@ -217,8 +217,9 @@ c     read nekton .rea file and make a mesh
       call getreafile('Input .rea / .re2 name:$',ifbinary,io,ierr)
       if (ierr.gt.0) then 
          write(6,'(A)') 'Error no .rea / .re2 file found!'
-         call linearmsh(cell,nelv,nelt,ndim)
-         return
+c         call linearmsh(cell,nelv,nelt,ndim)
+c         return
+         call exitt(1) 
       endif
 
       write(6,'(A)') 'Input mesh tolerance (default 0.2):'
@@ -333,18 +334,12 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       subroutine exitti(name,ie)
       character*40 name
-      write(6,*) name
-      write(6,*) ie,' quit'
-c     ke = 2*ie
-c     ff = 1./(ke-ie-ie)
+      write(6,*) name, ie
       stop
       end
 c-----------------------------------------------------------------------
       subroutine exitt(ie)
-      write(6,*)
-      write(6,*) ie,' quit'
-c     ke = 2*ie
-c     ff = 1./(ke-ie-ie)
+      write(6,*) 'exit status', ie
       stop
       end
 c-----------------------------------------------------------------------
@@ -360,6 +355,7 @@ c
       real dx(1)
       real x(8),y(8),z(8)
       integer e,buf(50)
+      integer*8 l
 
       integer h2s(8) ! hypercube to strange ordering
       save    h2s
