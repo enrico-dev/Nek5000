@@ -2,3 +2,6 @@
 	path = 3rd_party/gslib/gslib
 	url = https://github.com/enrico-dev/gslib.git
 	branch = enrico
+[submodule "examples"]
+	path = examples
+	url = https://github.com/Nek5000/NekExamples

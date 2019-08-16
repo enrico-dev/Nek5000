@@ -79,7 +79,7 @@ class NekTestCase(unittest.TestCase):
         f77 (str):            The Fortran 77 compiler to use     [default: 'gfortran']
         cc (str):             The C compiler to use              [default: 'gcc']
         ifmpi (bool):         Perform compilation/tests with MPI [default: False]
-        source_root (str):    Path to Nek source directory;overridden by $SOURCE_ROOT env variable
+        source_root (str):    Path to Nek source directory;overridden by $NEK_SOURCE_ROOT env variable
                               [default: '$HOME/nek5_svn/trunk/nek']
         tools_root (str):     Path to Nek tools directory; overridden by $TOOLS_ROOT env variable
                               [default: '$HOME/nek5_svn/trunk/tools']
@@ -182,7 +182,7 @@ class NekTestCase(unittest.TestCase):
 
         # Get paths from env
         try:
-            self.source_root = os.path.abspath(os.environ['SOURCE_ROOT'])
+            self.source_root = os.path.abspath(os.environ['NEK_SOURCE_ROOT'])
         except KeyError:
             pass
         else:
@@ -209,7 +209,7 @@ class NekTestCase(unittest.TestCase):
                 ('PPLIST', self.pplist),
                 ('USR_LFLAGS', self.usr_lflags),
                 ('IFMPI', self.ifmpi),
-                ('SOURCE_ROOT', self.source_root),
+                ('NEK_SOURCE_ROOT', self.source_root),
                 ('EXAMPLES_ROOT', self.examples_root),
                 ('LOG_ROOT', self.log_root),
                 ('TOOLS_ROOT', self.tools_root),
@@ -222,7 +222,7 @@ class NekTestCase(unittest.TestCase):
 
         # Verify that pathnames are valid
         for varname, varval in (
-                ('SOURCE_ROOT', self.source_root),
+                ('NEK_SOURCE_ROOT', self.source_root),
                 ('EXAMPLES_ROOT', self.examples_root),
                 ('LOG_ROOT', self.log_root),
                 ('TOOLS_ROOT', self.tools_root),
@@ -257,6 +257,15 @@ class NekTestCase(unittest.TestCase):
             params = self.size_params
 
         config_size(params=params, infile=infile, outfile=outfile)
+
+    def mkSIZE(self, case=None):
+        cls = self.__class__
+
+        if not case:
+            case = cls.case_name
+
+        workdir = os.path.join(self.examples_root, cls.example_subdir)
+        os.system('cd ' + workdir + ' ; ' + self.source_root + '/bin/mkSIZE ' + case)
 
     def config_parfile(self, opts=None, infile=None, outfile=None):
         from lib.nekFileConfig import config_parfile
@@ -348,28 +357,6 @@ class NekTestCase(unittest.TestCase):
             step_limit = step_limit,
             verbose    = self.verbose
         )
-
-    def move_logs(self):
-        cls = self.__class__
-        if self.log_root:
-            src_dir = os.path.join(self.examples_root, cls.example_subdir)
-            dest_dir = os.path.join(self.log_root, cls.example_subdir)
-            print("Moving logs...")
-            if not os.path.isdir(dest_dir):
-                print("    Making subdirectory {0}")
-                os.makedirs(os.path.join(dest_dir))
-
-            for f in os.listdir(src_dir):
-                if f == 'compiler.out' or f == 'genmap.out' or 'log' in f:
-                    src_file = os.path.join(src_dir, f)
-                    dest_file = os.path.join(dest_dir, f)
-                    try:
-                        os.rename(src_file, dest_file)
-                    except OSError as E:
-                        # TODO: change to warnings.warning
-                        print("    Could not move {0} to {1}: {2}".format(src_file, dest_file, E))
-                    else:
-                        print("    Moved {0} to {1}".format(src_file, dest_file))
 
     def mvn(self, src_prefix, dest_prefix):
         from lib.nekBinRun import mvn

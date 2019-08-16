@@ -1,17 +1,18 @@
 #!/bin/bash
+set -a
 #-------------------------------------------------------------------------------
-# Nek5000 config file
+# Nek5000 config
 #-------------------------------------------------------------------------------
 
 # source path 
-#SOURCE_ROOT="$HOME/Nek5000" 
+#NEK_SOURCE_ROOT="$HOME/Nek5000" 
 
 # Fortran/C compiler
 #FC="mpif77"
 #CC="mpicc"
 
-# pre-processor list (set to "?" to get a list of available symbols)
-#PPLIST="?" 
+# config options (set to "?" to get a list)
+#PPLIST="" 
 
 #-------------------------------------------------------------------------------
 # WHAT FOLLOWS ARE OPTIONAL SETTINGS
@@ -47,33 +48,14 @@
 ###############################################################################
 # DONT'T TOUCH WHAT FOLLOWS !!!
 ###############################################################################
-set -e
-
-# assign version tag
-mver=17.0.4
-
-# set defaults
-: ${SOURCE_ROOT:="$HOME/Nek5000"}
-: ${FC:="mpif77"}
-: ${CC:="mpicc"}
-: ${MPI:=1}
-: ${PROFILING:=1}
-: ${VISIT:=0}
-: ${PPLIST:=""}
-
-# overwrite source path with optional 2nd argument
-if [ -d $2 ] && [ $# -eq 2 ]; then
-  SOURCE_ROOT="$2"
-  echo "change source code directory to: ", $SOURCE_ROOT
+: ${NEK_SOURCE_ROOT:="$HOME/Nek5000"}
+echo "using source path: $NEK_SOURCE_ROOT"
+VERMAKENEK="19.0.1"
+set +a -e
+$NEK_SOURCE_ROOT/bin/nekconfig $@
+if [[ $1 != "clean" ]]; then
+ $NEK_SOURCE_ROOT/bin/nekconfig -build-dep
+ set -o pipefail
+ make -j4 2>&1 | tee -a build.log
+ set +o pipefail
 fi
-
-# create makefile
-source $SOURCE_ROOT/core/makenek.inc
-
-# compile 3rd_party code
-make_3rd_party 2>&1 | tee -a compiler.out
-
-# compile nek
-make -j4 -f makefile 2>&1 | tee -a compiler.out
-
-exit 0
