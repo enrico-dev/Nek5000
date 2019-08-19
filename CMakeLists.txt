@@ -294,6 +294,19 @@ add_subdirectory(3rd_party/gslib/gslib/)
 target_include_directories(nek5000 PRIVATE 3rd_party/gslib/include)
 target_link_libraries(libnek5000 PUBLIC libgs)
 
+# -----------------------------------------------------------------------------
+# BLAS/LAPACK
+# -----------------------------------------------------------------------------
+
+if(VENDOR_BLAS)
+  find_package(BLAS REQUIRED)
+  if(NOT BLAS_FOUND)
+    message(FATAL_ERROR "Could not find BLAS!")
+  endif()
+else()
+  add_subdirectory(3rd_party/blasLapack)
+  target_link_libraries(libnek5000 PRIVATE blasLapack)
+endif()
 
 # # CVODE
 # # This will find and link to a prebuild CVODE library.
