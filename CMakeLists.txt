@@ -267,6 +267,16 @@ foreach(target postx postex)
   target_include_directories(${target} PRIVATE tools/postnek)
 endforeach()
 
+add_executable(reatore2
+    core/byte.c
+    tools/reatore2/reatore2.f
+    tools/reatore2/strings.f)
+
+add_executable(re2torea
+    core/byte.c
+    tools/reatore2/re2torea.f
+    tools/reatore2/strings.f)
+
 # =============================================================================
 # Compiler Options
 # =============================================================================
@@ -302,7 +312,7 @@ else()
   message(FATAL_ERROR "Specified compiler (${CMAKE_Fortran_COMPILER_ID}) is not supported by Nek5000")
 endif()
 
-foreach(target libnek5000 nek5000 genbox genmap gmsh2nek)
+foreach(target libnek5000 nek5000 genbox genmap gmsh2nek reatore2 re2torea)
   target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:>${fopts};${real8})
 endforeach()
 
@@ -352,7 +362,7 @@ if(VISIT)
 endif()
 
 # For tools only
-foreach(target genbox genmap gmsh2nek postx postex)
+foreach(target genbox genmap gmsh2nek postx postex reatore2 re2torea)
   if(NOT MAXNEL)
     set(MAXNEL 150000)
   endif()
