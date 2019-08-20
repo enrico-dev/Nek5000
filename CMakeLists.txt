@@ -52,35 +52,6 @@ endif()
 
 message(STATUS "Nek5000 configured with '${CASENAME}.usr' found in ${CASEDIR}")
 
-# =============================================================================
-# Compiler Options
-# =============================================================================
-
-# Detect name-mangling scheme
-include(FortranCInterface)
-FortranCInterface_VERIFY()
-
-# Set fixed-format source
-# set(CMAKE_Fortran_FORMAT "FIXED")
-
-# Use preprocessor and 8-byte reals
-if(CMAKE_Fortran_COMPILER_ID STREQUAL GNU)
-  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy")
-  else()
-      set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8 -fdefault-double-8 -cpp -mcmodel=large -std=legacy")
-  endif()
-elseif(CMAKE_Fortran_COMPILER_ID STREQUAL PGI)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -Mpreprocess -mcmodel=medium")
-elseif(CMAKE_Fortran_COMPILER_ID STREQUAL Intel)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -fpconstant -fpp -mcmodel=large")
-elseif(CMAKE_Fortran_COMPILER_ID STREQUAL XL)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -qrealsize=8 -qdpc=e -qsuffix=cpp=f -qsuppress=cmpmsg")
-elseif(CMAKE_Fortran_COMPILER_ID STREQUAL Flang)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -cpp -r8 -std=legacy")
-else()
-  message(FATAL_ERROR "Specified compiler (${CMAKE_Fortran_COMPILER_ID}) is not supported by Nek5000")
-endif()
 
 # =============================================================================
 # Nek5000 Sources and Targets
@@ -239,7 +210,59 @@ add_executable(nek5000 core/drive.f)
 target_link_libraries(nek5000 PUBLIC libnek5000)
 
 # Tools
-# add_subdirectory(tools EXCLUDE_FROM_ALL)
+add_executable(genbox EXCLUDE_FROM_ALL
+    tools/genbox/byte.c
+    tools/genbox/genbox.f)
+add_executable(genmap EXCLUDE_FROM_ALL
+    core/byte.c
+    tools/genmap/genmap.f )
+add_executable(gmsh2nek EXCLUDE_FROM_ALL
+    core/byte.c
+    core/speclib.f
+    tools/gmsh2nek/gmsh2nek.f90
+    tools/gmsh2nek/mod_SIZE.f90
+    tools/gmsh2nek/mxm.f )
+#add_executable()
+
+# =============================================================================
+# Compiler Options
+# =============================================================================
+
+# Detect name-mangling scheme
+include(FortranCInterface)
+FortranCInterface_VERIFY()
+
+# Set fixed-format source
+# set(CMAKE_Fortran_FORMAT "FIXED")
+
+# Use preprocessor and 8-byte reals
+if(CMAKE_Fortran_COMPILER_ID STREQUAL GNU)
+  set(real8 -fdefault-real-8 -fdefault-double-8)
+  if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    set(fopts -cpp -std=legacy)
+  else()
+    set(fopts -cpp -mcmodel=large -std=legacy)
+  endif()
+elseif(CMAKE_Fortran_COMPILER_ID STREQUAL PGI)
+  set(real8 -r8)
+  set(fopts -Mpreprocess -mcmodel=medium)
+elseif(CMAKE_Fortran_COMPILER_ID STREQUAL Intel)
+  set(real8 -r8)
+  set(fopts -fpconstant -fpp -mcmodel=large)
+elseif(CMAKE_Fortran_COMPILER_ID STREQUAL XL)
+  set(real8 -qrealsize=8 )
+  set(fopts -qdpc=e -qsuffix=cpp=f -qsuppress=cmpmsg)
+elseif(CMAKE_Fortran_COMPILER_ID STREQUAL Flang)
+  set(real8 -r8)
+  set(fopts -cpp -std=legacy)
+else()
+  message(FATAL_ERROR "Specified compiler (${CMAKE_Fortran_COMPILER_ID}) is not supported by Nek5000")
+endif()
+
+# Excludes some targets
+foreach(target libnek5000 nek5000 genbox genmap gmsh2nek)
+  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:>${fopts};${real8})
+endforeach()
 
 # =============================================================================
 # Preprocessor Symbols
@@ -254,7 +277,8 @@ if(NOT MPI OR NOT MPIIO)
 endif()
 
 if(FortranCInterface_GLOBAL_SUFFIX STREQUAL "_")
-  target_compile_definitions(libnek5000 PRIVATE -DUNDERSCORE)
+  # For both libnek5000 and tools
+  add_definitions(-DUNDERSCORE)
 endif()
 
 # Hardcoded in makenek.inc but unused by Nek5000 itself. It is passed to the gslib build.
@@ -280,6 +304,14 @@ if(VISIT)
     target_compile_definitions(libnek5000 PRIVATE -DVISIT_STOP)
   endif()
 endif()
+
+# For tools only
+foreach(target genbox genmap gmsh2nek)
+  if(NOT MAXNEL)
+    set(MAXNEL 150000)
+  endif()
+  target_compile_definitions(${target} PRIVATE -DMAXNEL=${MAXNEL})
+endforeach()
 
 
 # =============================================================================
