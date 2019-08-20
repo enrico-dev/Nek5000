@@ -210,19 +210,62 @@ add_executable(nek5000 core/drive.f)
 target_link_libraries(nek5000 PUBLIC libnek5000)
 
 # Tools
+
 add_executable(genbox EXCLUDE_FROM_ALL
     tools/genbox/byte.c
     tools/genbox/genbox.f)
+
 add_executable(genmap EXCLUDE_FROM_ALL
     core/byte.c
     tools/genmap/genmap.f )
+
 add_executable(gmsh2nek EXCLUDE_FROM_ALL
     core/byte.c
     core/speclib.f
     tools/gmsh2nek/gmsh2nek.f90
     tools/gmsh2nek/mod_SIZE.f90
     tools/gmsh2nek/mxm.f )
-#add_executable()
+
+set(POSTNEK_CORE_SOURCES
+  core/3rd_party/dictionary.c
+  core/3rd_party/finiparser.c
+  core/3rd_party/iniparser.c
+  tools/postnek/animate.f
+  tools/postnek/blas.f
+  tools/postnek/byte.c
+  tools/postnek/coef.f
+  tools/postnek/g3d.f
+  tools/postnek/genxyz.f
+  tools/postnek/getfld.f
+  tools/postnek/legend.f
+  tools/postnek/locglob.f
+  tools/postnek/mxm.f
+  tools/postnek/plot.f
+  tools/postnek/postnek.f
+  tools/postnek/postnek2.f
+  tools/postnek/postnek3.f
+  tools/postnek/postnek5.f
+  tools/postnek/postnek5a.f
+  tools/postnek/postnek6.f
+  tools/postnek/postnek7.f
+  tools/postnek/postnek8.f
+  tools/postnek/postnek9.f
+  tools/postnek/revert.c
+  tools/postnek/scrdmp.f
+  tools/postnek/screen.f
+  tools/postnek/speclib.f
+  tools/postnek/ssyev.f
+  tools/postnek/subs.f
+  tools/postnek/trap.f
+  tools/postnek/tsort.f
+  tools/postnek/userf.f
+  tools/postnek/xdriver.c
+  tools/postnek/xinterface.f )
+add_executable(postx ${POSTNEK_CORE_SOURCES} tools/postnek/iolib.f)
+add_executable(postex ${POSTNEK_CORE_SOURCES} tools/postnek/iolib_no_graph.f)
+foreach(target postx postex)
+  target_include_directories(${target} PRIVATE tools/postnek)
+endforeach()
 
 # =============================================================================
 # Compiler Options
@@ -259,9 +302,12 @@ else()
   message(FATAL_ERROR "Specified compiler (${CMAKE_Fortran_COMPILER_ID}) is not supported by Nek5000")
 endif()
 
-# Excludes some targets
 foreach(target libnek5000 nek5000 genbox genmap gmsh2nek)
   target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:>${fopts};${real8})
+endforeach()
+
+foreach(target postx postex)
+  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:>${fopts};)
 endforeach()
 
 # =============================================================================
@@ -306,7 +352,7 @@ if(VISIT)
 endif()
 
 # For tools only
-foreach(target genbox genmap gmsh2nek)
+foreach(target genbox genmap gmsh2nek postx postex)
   if(NOT MAXNEL)
     set(MAXNEL 150000)
   endif()
@@ -339,6 +385,21 @@ else()
   add_subdirectory(3rd_party/blasLapack)
   target_link_libraries(libnek5000 PRIVATE blasLapack)
 endif()
+
+# -----------------------------------------------------------------------------
+# X11 (for postnek)
+# -----------------------------------------------------------------------------
+
+find_package(X11)
+if(X11_FOUND)
+  foreach(target postx postex)
+    target_include_directories(${target} PRIVATE ${X11_INCLUDE_DIR})
+    target_link_libraries(${target} PRIVATE ${X11_LIBRARIES})
+  endforeach()
+else()
+  message(WARNING "X11 was not found.  postnek will be unavailable.")
+endif()
+
 
 # # CVODE
 # # This will find and link to a prebuild CVODE library.
