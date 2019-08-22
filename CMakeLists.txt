@@ -52,6 +52,14 @@ endif()
 
 message(STATUS "Nek5000 configured with '${CASENAME}.usr' found in ${CASEDIR}")
 
+# =============================================================================
+# Internal options
+# =============================================================================
+
+# Legacy build system specifies static libraries, but this causes compiler
+# to run out of memory.  Note that in CMake, shared libs are build with
+# PIC by default, so all should be well with shared libs.
+#set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" INTERNAL)
 
 # =============================================================================
 # Nek5000 Sources and Targets
@@ -265,8 +273,8 @@ set(POSTNEK_CORE_SOURCES
   tools/postnek/userf.f
   tools/postnek/xdriver.c
   tools/postnek/xinterface.f )
-add_executable(postx ${POSTNEK_CORE_SOURCES} tools/postnek/iolib.f)
-add_executable(postex ${POSTNEK_CORE_SOURCES} tools/postnek/iolib_no_graph.f)
+add_executable(postx EXCLUDE_FROM_ALL ${POSTNEK_CORE_SOURCES} tools/postnek/iolib.f)
+add_executable(postex EXCLUDE_FROM_ALL ${POSTNEK_CORE_SOURCES} tools/postnek/iolib_no_graph.f)
 foreach(target postx postex)
   target_include_directories(${target} PRIVATE tools/postnek)
 endforeach()
@@ -379,11 +387,21 @@ endforeach()
 # =============================================================================
 
 # -----------------------------------------------------------------------------
+# MPI
+# -----------------------------------------------------------------------------
+
+if(MPI)
+  # TODO: Check MPI library using find_package(MPI)
+  set(MPI_C_COMPILER ${CMAKE_C_COMPILER})
+  set(MPI_Fortran_COMPILER ${CMAKE_Fortran_COMPILER})
+endif()
+
+# -----------------------------------------------------------------------------
 # gslib
 # -----------------------------------------------------------------------------
 
 add_subdirectory(3rd_party/gslib/gslib/)
-target_include_directories(nek5000 PRIVATE 3rd_party/gslib/include)
+target_include_directories(nek5000 PUBLIC 3rd_party/gslib/include)
 target_link_libraries(libnek5000 PUBLIC libgs)
 
 # -----------------------------------------------------------------------------
@@ -414,6 +432,26 @@ else()
   message(WARNING "X11 was not found.  postnek will be unavailable.")
 endif()
 
+# -----------------------------------------------------------------------------
+# HYPRE
+# -----------------------------------------------------------------------------
+
+if(HYPRE)
+  set(HYPRE_BIGINT ON CACHE BOOL "Use long long int for HYPRE_Int" INTERNAL)
+  set(HYPRE_USING_FEI OFF CACHE BOOL "Use FEI for HYPRE" INTERNAL)
+  add_subdirectory(3rd_party/hypre/hypre/src)
+  target_include_directories(libnek5000 PUBLIC
+      ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/hypre/hypre/src
+      3rd_party/hypre/hypre/src
+      3rd_party/hypre/hypre/src/IJ_mv
+      3rd_party/hypre/hypre/src/krylov
+      3rd_party/hypre/hypre/src/multivector
+      3rd_party/hypre/hypre/src/parcsr_ls
+      3rd_party/hypre/hypre/src/parcsr_mv
+      3rd_party/hypre/hypre/src/seq_mv
+      3rd_party/hypre/hypre/src/utilities)
+  target_link_libraries(libnek5000 PUBLIC HYPRE)
+endif()
 
 # # CVODE
 # # This will find and link to a prebuild CVODE library.
@@ -433,11 +471,6 @@ endif()
 #       ${SUNDIALS_FCVODE} ${SUNDIALS_CVODE}
 #       ${SUNDIALS_FVEC} ${SUNDIALS_FVEC})
 # endif()
-#
-# # BLAS
-# # TODO: Check for BLAS libraries
-# # if(VENDOR_BLAS)
-# # endif()
 #
 # # VISIT
 # # TODO: Did visit libraries, but need to do visit headers
