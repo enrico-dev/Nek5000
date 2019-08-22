@@ -215,6 +215,10 @@ add_executable(genbox EXCLUDE_FROM_ALL
     tools/genbox/byte.c
     tools/genbox/genbox.f)
 
+add_executable(gencon EXCLUDE_FROM_ALL
+    core/byte.c
+    tools/gencon/gencon.f)
+
 add_executable(genmap EXCLUDE_FROM_ALL
     core/byte.c
     tools/genmap/genmap.f )
@@ -317,7 +321,7 @@ foreach(target libnek5000 nek5000 genbox genmap gmsh2nek reatore2 re2torea)
 endforeach()
 
 foreach(target postx postex)
-  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:>${fopts};)
+  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:>${fopts})
 endforeach()
 
 # =============================================================================
@@ -362,7 +366,7 @@ if(VISIT)
 endif()
 
 # For tools only
-foreach(target genbox genmap gmsh2nek postx postex reatore2 re2torea)
+foreach(target genbox gencon genmap gmsh2nek postx postex reatore2 re2torea)
   if(NOT MAXNEL)
     set(MAXNEL 150000)
   endif()
