@@ -56,10 +56,11 @@ message(STATUS "Nek5000 configured with '${CASENAME}.usr' found in ${CASEDIR}")
 # Internal options
 # =============================================================================
 
-# Legacy build system specifies static libraries, but this causes compiler
-# to run out of memory.  Note that in CMake, shared libs are build with
-# PIC by default, so all should be well with shared libs.
-#set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" INTERNAL)
+# One libsundials_fcvode_static is only available as a static library, so we must
+# force this...
+if (CVODE)
+  set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+endif()
 
 # =============================================================================
 # Nek5000 Sources and Targets
@@ -70,7 +71,10 @@ set(USR_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/${CASENAME}.f)
 ADD_CUSTOM_COMMAND(
     OUTPUT ${USR_SOURCE}
     COMMAND ${CMAKE_COMMAND}
-    -DCASENAME=${CASENAME} -DINFILE_DIR=${CASEDIR} -DOUTFILE_DIR=${CMAKE_CURRENT_BINARY_DIR}
+    -DCASENAME=${CASENAME}
+    -DINFILE_DIR=${CASEDIR}
+    -DOUTFILE_DIR=${CMAKE_CURRENT_BINARY_DIR}
+    -DCVODE=${CVODE}
     -P ${CMAKE_CURRENT_LIST_DIR}/core/mkuserfile.cmake
     DEPENDS ${CASEDIR}/${CASENAME}.usr
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -401,7 +405,7 @@ endif()
 # -----------------------------------------------------------------------------
 
 add_subdirectory(3rd_party/gslib/gslib/)
-target_include_directories(nek5000 PUBLIC 3rd_party/gslib/include)
+target_include_directories(libnek5000 PUBLIC 3rd_party/gslib/gslib/include)
 target_link_libraries(libnek5000 PUBLIC libgs)
 
 # -----------------------------------------------------------------------------
@@ -437,8 +441,8 @@ endif()
 # -----------------------------------------------------------------------------
 
 if(HYPRE)
-  set(HYPRE_BIGINT ON CACHE BOOL "Use long long int for HYPRE_Int" INTERNAL)
-  set(HYPRE_USING_FEI OFF CACHE BOOL "Use FEI for HYPRE" INTERNAL)
+  set(HYPRE_BIGINT ON CACHE BOOL "Use long long int for HYPRE_Int" FORCE)
+  set(HYPRE_USING_FEI OFF CACHE BOOL "Use FEI for HYPRE" FORCE)
   add_subdirectory(3rd_party/hypre/hypre/src)
   target_include_directories(libnek5000 PUBLIC
       ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/hypre/hypre/src
@@ -451,6 +455,42 @@ if(HYPRE)
       3rd_party/hypre/hypre/src/seq_mv
       3rd_party/hypre/hypre/src/utilities)
   target_link_libraries(libnek5000 PUBLIC HYPRE)
+endif()
+
+if(CVODE)
+  set(BUILD_ARKODE OFF CACHE BOOL "Build the ARKODE library for CVODE" FORCE)
+  set(BUILD_CVODES OFF CACHE BOOL "Build the CVODES library for CVODE" FORCE)
+  set(BUILD_IDA OFF CACHE BOOL "Build the IDA library for CVODE" FORCE)
+  set(BUILD_IDAS OFF CACHE BOOL "Build the IDAS library for CVODE" FORCE)
+  set(BUILD_KINSOL OFF CACHE BOOL "Build the KINSOL library for CVODE" FORCE)
+  set(EXAMPLES_INSTALL OFF CACHE BOOL "Install example files for CVODE" FORCE)
+  set(EXAMPLES_ENABLE OFF CACHE BOOL "Build the SUNDIALS examples for CVODE" FORCE)
+  set(MPI_ENABLE ON CACHE BOOL "Enable MPI for CVODE" FORCE)
+  set(FCMIX_ENABLE ON CACHE BOOL "Enable Fortran-C support for CVODE" FORCE)
+  set(MPI_MPICC "${CMAKE_C_COMPILER}" CACHE STRING "MPI C Compiler for CVODE" FORCE)
+  set(MPI_MPIF77 "${CMAKE_Fortran_COMPILER}" CACHE STRING "MPI Fortran Compiler for CVODE" FORCE)
+
+  add_subdirectory(3rd_party/cvode/sundials-2.7.0)
+
+  target_include_directories(libnek5000 PUBLIC
+      ${CMAKE_CURRENT_BINARY_DIR}/3rd_party/cvode/sundials-2.7.0/include/sundials
+      3rd_party/cvode/sundials-2.7.0/include/cvode
+      3rd_party/cvode/sundials-2.7.0/include/nvector
+      3rd_party/cvode/sundials-2.7.0/src/cvode/fcmix)
+
+  if(MPI)
+    target_link_libraries(libnek5000 PUBLIC
+        sundials_fcvode_static
+        sundials_cvode_static
+        sundials_fnvecparallel_static
+        sundials_nvecparallel_static)
+  else()
+    target_link_libraries(libnek5000 PUBLIC
+        sundials_fcvode_static
+        sundials_cvode_static
+        sundials_fnvecserial_static
+        sundials_nvecserial_static)
+  endif()
 endif()
 
 # # CVODE
