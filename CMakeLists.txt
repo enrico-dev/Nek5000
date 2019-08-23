@@ -146,6 +146,7 @@ set(CORE_SOURCES
     core/navier6.f
     core/navier7.f
     core/navier8.f
+    core/nek_interface.f
     core/papi.f
     core/partitioner.c
     core/perturb.f
@@ -226,7 +227,7 @@ add_library(libnek5000
     ${NEKNEK_SOURCES} ${COMM_MPI_SOURCES} ${CMT_SOURCES} ${VISIT_SOURCES})
 set_target_properties(libnek5000 PROPERTIES OUTPUT_NAME nek5000)
 target_include_directories(libnek5000 PUBLIC
-    ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR} core core/3rd_party core/cmt
+    ${CMAKE_CURRENT_BINARY_DIR} core core/3rd_party core/cmt
     core/experimental)
 
 # Driver

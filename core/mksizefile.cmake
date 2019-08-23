@@ -82,6 +82,7 @@ c automatically added by cmake
     string(CONCAT size_str "${size_str}"
 "
 c automatically added by cmake
+      integer lfdm
       parameter (lfdm=0)  ! == 1 for fast diagonalization method
 ")
   endif()
@@ -90,6 +91,7 @@ c automatically added by cmake
     string(CONCAT size_str "${size_str}"
 "
 c automatically added by cmake
+      integer nsessmax
       parameter (nsessmax=1)  ! max sessions to NEKNEK
 ")
   endif()
@@ -98,6 +100,7 @@ c automatically added by cmake
     string(CONCAT size_str "${size_str}"
 "
 c automatically added by cmake
+      integer nmaxl_nn
       parameter (nmaxl_nn=
      $          min(1+(nsessmax-1)*2*ldim*lxz*lelt,2*ldim*lxz*lelt))
 ")
@@ -107,6 +110,7 @@ c automatically added by cmake
     string(CONCAT size_str "${size_str}"
 "
 c automatically added by cmake
+      integer nfldmax_nn
       parameter (nfldmax_nn=
      $          min(1+(nsessmax-1)*(ldim+1+ldimt),ldim+1+ldimt))
 ")
@@ -116,6 +120,7 @@ c automatically added by cmake
     string(CONCAT size_str "${size_str}"
 "
 c automatically added by cmake
+      integer nio
       common/IOFLAG/nio  ! for logfile verbosity control
 ")
   endif()
