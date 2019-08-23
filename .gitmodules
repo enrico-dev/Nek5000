@@ -2,3 +2,9 @@
 	path = 3rd_party/gslib/gslib
 	url = https://github.com/enrico-dev/gslib.git
 	branch = enrico
+[submodule "examples"]
+	path = examples
+	url = https://github.com/Nek5000/NekExamples
+[submodule "3rd_party/hypre/hypre"]
+	path = 3rd_party/hypre/hypre
+	url = https://github.com/LLNL/hypre.git

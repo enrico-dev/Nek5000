@@ -45,31 +45,24 @@ C--------------------------------------------------------------------
 
 c     Set default logicals
 
-      IFDOIT    = .FALSE.
-      IFCVODE   = .false.
-      IFEXPLVIS = .false.
+      ifdoit    = .false.
+      ifcvode   = .false.
+      ifexplvis = .false.
+      ifvvisp   = .true.
 
       ifsplit = .false.
       if (lx1.eq.lx2) ifsplit=.true.
 
       if_full_pres = .false.
 
-c     Turn off (on) diagnostics for communication
-      IFGPRNT= .FALSE.
-
       CALL RZERO (PARAM,200)
-C
-C     The initialization of CBC is done in READAT
-C
-C      LCBC = 3*6*LELT*(LDIMT1+1)
-C      CALL BLANK(CBC,LCBC)
-C
+
       CALL BLANK(CCURVE ,12*LELT)
       NEL8 = 8*LELT
       CALL RZERO(XC,NEL8)
       CALL RZERO(YC,NEL8)
       CALL RZERO(ZC,NEL8)
-C
+
       NTOT=lx1*ly1*lz1*LELT
       CALL RZERO(ABX1,NTOT)
       CALL RZERO(ABX2,NTOT)
@@ -83,6 +76,8 @@ C
       NTOT=lx2*ly2*lz2*LELT
       CALL RZERO(USRDIV,NTOT)
       CALL RZERO(QTL,NTOT)
+
+      NSTEPS = 0
 
       RETURN
       END
@@ -154,6 +149,10 @@ C------------------------------------------------------------------------
       include 'GEOM'
       include 'DEALIAS'
       include 'TSTEP'
+      include 'NEKNEK'
+
+      param(120) = 500 ! print runtime stats
+
 C
 C     Geometry on Mesh 3 or 1?
 C
@@ -186,12 +185,17 @@ C
              NELFLD(IFIELD) = NELV
          ENDIF
  100  CONTINUE
-C
-      NMXH   = 1000
-      if (iftran) NMXH   = 100
-      NMXP   = 1000 !  (for testing) 100 !  2000
-      NMXE   = 100 !  1000
-      NMXNL  = 10  !  100
+
+      ! Maximum iteration counts for linear solver
+      NMXV   = 1000
+      if (iftran) NMXV = 200
+      NMXH   =  NMXV ! not used anymore
+      NMXP   = 200
+      do ifield = 2,ldimt+1
+         NMXT(ifield-1) = 200 
+      enddo 
+      NMXE   = 100
+      NMXNL  = 10 
 C
       PARAM(86) = 0 ! No skew-symm. convection for now
 C
@@ -269,12 +273,15 @@ C     Initialize time step array.
 C
       NBD    = 0
       CALL RZERO (DTLAG,10)
-C
-C     Useful constants
-C
+
+      ! neknek 
+      ifneknekm = .false.
+      ninter = 1
+      nfld_neknek = ndim + nfield
+
       one = 1.
       PI  = 4.*ATAN(one)
-C
+
       RETURN
       END
 C
@@ -390,42 +397,6 @@ C
          CALL SETINVM
          CALL SETDEF
          CALL SFASTAX
-         IF (ISTEP.GE.1) CALL EINIT
-      ELSEIF (IGEOM.EQ.3) THEN
-c
-c        Take direct stiffness avg of mesh
-c
-         ifieldo = ifield
-         if (.not.ifneknekm) CALL GENCOOR (XM3,YM3,ZM3)
-         if (ifheat) then
-            ifield = 2
-            CALL dssum(xm3,lx3,ly3,lz3)
-            call col2 (xm3,tmult,ntot3)
-            CALL dssum(ym3,lx3,ly3,lz3)
-            call col2 (ym3,tmult,ntot3)
-            if (if3d) then
-               CALL dssum(xm3,lx3,ly3,lz3)
-               call col2 (xm3,tmult,ntot3)
-            endif
-         else
-            ifield = 1
-            CALL dssum(xm3,lx3,ly3,lz3)
-            call col2 (xm3,vmult,ntot3)
-            CALL dssum(ym3,lx3,ly3,lz3)
-            call col2 (ym3,vmult,ntot3)
-            if (if3d) then
-               CALL dssum(xm3,lx3,ly3,lz3)
-               call col2 (xm3,vmult,ntot3)
-            endif
-         endif
-         CALL GEOM1 (XM3,YM3,ZM3)
-         CALL GEOM2
-         CALL UPDMSYS (1)
-         CALL VOLUME
-         CALL SETINVM
-         CALL SETDEF
-         CALL SFASTAX
-         ifield = ifieldo
       ENDIF
 
       if (nio.eq.0.and.istep.le.1) then
@@ -720,7 +691,13 @@ c                - Incompressibe or Weakly compressible (div u .ne. 0).
 
          call plan4 (igeom)                                           
          if (igeom.ge.2) call chkptol         ! check pressure tolerance 
-         if (igeom.ge.2) call vol_flow        ! check for fixed flow rate
+         if (igeom.eq.ngeom) then
+           if (ifneknekc) then
+              call vol_flow_ms    ! check for fixed flow rate
+           else
+              call vol_flow       ! check for fixed flow rate
+           endif
+         endif
          if (igeom.ge.2) call printdiverr
 
       elseif (iftran) then
@@ -735,7 +712,13 @@ c        call plan1 (igeom)       !  Orig. NEKTON time stepper
          endif
 
          if (igeom.ge.2) call chkptol         ! check pressure tolerance
-         if (igeom.ge.2) call vol_flow        ! check for fixed flow rate
+         if (igeom.eq.ngeom) then 
+           if (ifneknekc) then
+              call vol_flow_ms    ! check for fixed flow rate
+           else
+              call vol_flow       ! check for fixed flow rate
+           endif
+         endif
 
       else   !  steady Stokes, non-split
 
@@ -845,202 +828,6 @@ C
 C
       RETURN
       END
-      subroutine rescont (ind)
-c
-      include 'SIZE'
-      include 'INPUT'
-      include 'PARALLEL'
-      include 'TSTEP'
-c
-      if (np.gt.1) return
-      irst = param(46)
-      iwrf = 1
-      if (irst.ne.0) then
-         iwrf = mod(istep,iabs(irst))
-         if (lastep.eq.1) iwrf = 0
-      endif
-c
-      if (ind.eq.1 .and. irst.gt.0) call rstartc (ind)
-      if (ind.eq.0 .and. iwrf.eq.0) call rstartc (ind)
-c
-      return     
-      end
-      subroutine rstartc (ind)
-c
-      include 'SIZE'
-      include 'TOTAL'
-      common /SCRSF/ xm3(lx3,ly3,lz3,lelv)
-     $             , ym3(lx3,ly3,lz3,lelv)
-     $             , zm3(lx3,ly3,lz3,lelv)
-c
-      integer icall1,icall2
-      save    icall1,icall2
-      data    icall1 /0/
-      data    icall2 /0/
-c
-      if (np.gt.1) return
-      ntov1=lx1*ly1*lz1*nelv
-      ntov2=lx2*ly2*lz2*nelv
-      ntot1=lx1*ly1*lz1*nelt
-      ntfc1=lx1*lz1*6*nelv 
-      ntow1=lx1m*ly1m*lz1m*nelfld(0)
-      ntoe1=lx1m*ly1m*lz1m*nelv
-      ntotf=ntot1*ldimt
-      nlag =lorder-1
-c
-      if (ind.eq.1) then
-c
-          iru=22
-          if (icall1.eq.0) then
-             icall1=1
-             open(unit=22,file=orefle,status='OLD')
-          endif
-c
-          rewind iru
-          read(iru,1100,end=9000) time,dt,courno,(dtlag(i),i=1,10)
-          read(iru,1100,end=9000) eigaa, eigas, eigast, eigae,
-     $                            eigga, eiggs, eiggst, eigge
-c
-          write (6,*) '  '
-          write (6,*) 'READ RESTART FILE, TIME =',time
-c
-          iread = 0
-          if (ifmvbd) then
-             read (iru,1100,end=9000) (xm1(i,1,1,1),i=1,ntot1)
-             read (iru,1100,end=9000) (ym1(i,1,1,1),i=1,ntot1)
-             if (ldim.eq.3)
-     $       read (iru,1100,end=9000) (zm1(i,1,1,1),i=1,ntot1)
-             read (iru,1100,end=9000) (wx(i,1,1,1) ,i=1,ntow1)
-             read (iru,1100,end=9000) (wy(i,1,1,1) ,i=1,ntow1)
-             if (ldim.eq.3)
-     $       read (iru,1100,end=9000) (wz(i,1,1,1) ,i=1,ntow1)
-            if (nlag.ge.1) then
-             read (iru,1100,end=9000) (wxlag(i,1,1,1,1) ,i=1,ntow1*nlag)
-             read (iru,1100,end=9000) (wylag(i,1,1,1,1) ,i=1,ntow1*nlag)
-             if (ldim.eq.3)
-     $       read (iru,1100,end=9000) (wzlag(i,1,1,1,1) ,i=1,ntow1*nlag)
-            endif
-          endif
-c
-          iread = 1
-          if (ifflow) then
-             read (iru,1100,end=9000) (vx(i,1,1,1) ,i=1,ntov1)
-             read (iru,1100,end=9000) (vy(i,1,1,1) ,i=1,ntov1)
-             if (ldim.eq.3)
-     $       read (iru,1100,end=9000) (vz(i,1,1,1) ,i=1,ntov1)
-             read (iru,1100,end=9000) (pr(i,1,1,1) ,i=1,ntov2)
-             read (iru,1100,end=9000) (abx2(i,1,1,1),i=1,ntov1)
-             read (iru,1100,end=9000) (aby2(i,1,1,1),i=1,ntov1)
-             if (ldim.eq.3)
-     $       read (iru,1100,end=9000) (abz2(i,1,1,1),i=1,ntov1)
-             read (iru,1100,end=9000) (abx1(i,1,1,1),i=1,ntov1)
-             read (iru,1100,end=9000) (aby1(i,1,1,1),i=1,ntov1)
-             if (ldim.eq.3)
-     $       read (iru,1100,end=9000) (abz1(i,1,1,1),i=1,ntov1)
-            if (nlag.ge.1) then
-             read (iru,1100,end=9000) (vxlag (i,1,1,1,1),i=1,ntov1*nlag)
-             read (iru,1100,end=9000) (vylag (i,1,1,1,1),i=1,ntov1*nlag)
-             if (ldim.eq.3)
-     $       read (iru,1100,end=9000) (vzlag (i,1,1,1,1),i=1,ntov1*nlag)
-             read (iru,1100,end=9000) (bm1lag(i,1,1,1,1),i=1,ntot1*nlag)
-            endif
-          endif
-c
-          iread = 2
-          if (ifheat) then
-             read (iru,1100,end=9000) (t(i,1,1,1,1),i=1,ntotf)
-             read (iru,1100,end=9000) (vgradt1(i,1,1,1,1),i=1,ntotf)
-             read (iru,1100,end=9000) (vgradt2(i,1,1,1,1),i=1,ntotf)
-            if (nlag.ge.1) then
-             read (iru,1100,end=9000) (tlag(i,1,1,1,1,1),i=1,ntotf*nlag)
-            endif
-          endif
-c
-          if (ifgeom) then
-             call geom1 (xm3,ym3,zm3)
-             call geom2
-             call updmsys (1)
-             call volume
-             call setinvm
-          endif
-c
-      elseif (ind.eq.0) then
-c
-          iwu=23
-          if (icall2.eq.0) then
-             icall2=1
-             open(unit=23,file=nrefle,status='NEW')
-          endif
-c
-          rewind iwu
-          write(iwu,1100) time,dt,courno,(dtlag(i),i=1,10)
-          write(iwu,1100) eigaa, eigas, eigast, eigae,
-     $                    eigga, eiggs, eiggst, eigge
-c
-          write (6,*) '  '
-          write (6,*) 'WRITE RESTART FILE, TIME =',time
-c
-          if (ifmvbd) then
-             write (iwu,1100) (xm1(i,1,1,1),i=1,ntot1)
-             write (iwu,1100) (ym1(i,1,1,1),i=1,ntot1)
-             if (ldim.eq.3)
-     $       write (iwu,1100) (zm1(i,1,1,1),i=1,ntot1)
-             write (iwu,1100) (wx(i,1,1,1) ,i=1,ntow1)
-             write (iwu,1100) (wy(i,1,1,1) ,i=1,ntow1)
-             if (ldim.eq.3)
-     $       write (iwu,1100) (wz(i,1,1,1) ,i=1,ntow1)
-            if (nlag.ge.1) then
-             write (iwu,1100) (wxlag(i,1,1,1,1) ,i=1,ntow1*nlag)
-             write (iwu,1100) (wylag(i,1,1,1,1) ,i=1,ntow1*nlag)
-             if (ldim.eq.3)
-     $       write (iwu,1100) (wzlag(i,1,1,1,1) ,i=1,ntow1*nlag)
-            endif
-          endif
-c
-          if (ifflow) then
-             write (iwu,1100) (vx(i,1,1,1) ,i=1,ntov1)
-             write (iwu,1100) (vy(i,1,1,1) ,i=1,ntov1)
-             if (ldim.eq.3)
-     $       write (iwu,1100) (vz(i,1,1,1) ,i=1,ntov1)
-             write (iwu,1100) (pr(i,1,1,1) ,i=1,ntov2)
-             write (iwu,1100) (abx2(i,1,1,1),i=1,ntov1)
-             write (iwu,1100) (aby2(i,1,1,1),i=1,ntov1)
-             if (ldim.eq.3)
-     $       write (iwu,1100) (abz2(i,1,1,1),i=1,ntov1)
-             write (iwu,1100) (abx1(i,1,1,1),i=1,ntov1)
-             write (iwu,1100) (aby1(i,1,1,1),i=1,ntov1)
-             if (ldim.eq.3)
-     $       write (iwu,1100) (abz1(i,1,1,1),i=1,ntov1)
-            if (nlag.ge.1) then
-             write (iwu,1100) (vxlag (i,1,1,1,1),i=1,ntov1*nlag)
-             write (iwu,1100) (vylag (i,1,1,1,1),i=1,ntov1*nlag)
-             if (ldim.eq.3)
-     $       write (iwu,1100) (vzlag (i,1,1,1,1),i=1,ntov1*nlag)
-             write (iwu,1100) (bm1lag(i,1,1,1,1),i=1,ntot1*nlag)
-            endif
-          endif
-c
-          if (ifheat) then
-             write (iwu,1100) (t(i,1,1,1,1),i=1,ntotf)
-             write (iwu,1100) (vgradt1(i,1,1,1,1),i=1,ntotf)
-             write (iwu,1100) (vgradt2(i,1,1,1,1),i=1,ntotf)
-            if (nlag.ge.1) then
-             write (iwu,1100) (tlag(i,1,1,1,1,1),i=1,ntotf*nlag)
-            endif
-          endif
-c
-      endif
-c
-      return
-c
- 1100 format ((5e16.8))
- 9000 continue
-c     
-      write ( 6,*)  ' RECORD OUT-OF-ORDER DURING READING OF RESTART' 
-      write ( 6,*)  ' FILE -- iread =',iread
-c
-      call exitt
-      end
 c-----------------------------------------------------------------------
       subroutine time00
 c
@@ -1114,6 +901,9 @@ c
       ttime=0.0
       tcvf =0.0
       tproj=0.0
+      tuchk=0.0
+      tmakf=0.0
+      tmakq=0.0
 C
       return
       end
@@ -1147,21 +937,6 @@ c-----------------------------------------------------------------------
       tttstp=ttime         ! sum over all timesteps
 
 c      call opcount(3)      ! print op-counters
-
-      call nek_comm_getstat(comm_timers,comm_counters)
-      tgp2     = comm_timers(1)
-      tgop_sync = comm_timers(2)
-      twal      = comm_timers(3)
-      tsyc      = comm_timers(4)
-      tirc      = comm_timers(5)
-      tisd      = comm_timers(6)       
-      trc       = comm_timers(7)
-      tsd       = comm_timers(8)
-      ngp2     = comm_counters(1)
-      nwal      = comm_counters(3)
-      nsyc      = comm_counters(4)
-      nirc      = comm_counters(5)
-      nisd      = comm_counters(6)
 
       tcomm  = tisd + tirc + tsyc + tgp2+ twal + trc + tsd
       min_comm = tcomm
@@ -1255,6 +1030,7 @@ c
 c
       tttstp = tttstp + 1e-7
       if (nio.eq.0) then
+         write(6,*) ''
          write(6,'(A)') 'runtime statistics:'
 
          pinit=tinit/tttstp
@@ -1281,13 +1057,21 @@ c        E solver timings
          peslv=teslv/tttstp 
          write(6,*) 'eslv time',neslv,teslv,peslv
 
+c        makef timings
+         pmakf=tmakf/tttstp 
+         write(6,*) 'makf time',tmakf,pmakf
+
+c        makeq timings
+         pmakq=tmakq/tttstp 
+         write(6,*) 'makq time',tmakq,pmakq
+
 c        CVODE RHS timings
          pcvf=tcvf/tttstp
          if(ifcvode) write(6,*) 'cfun time',ncvf,tcvf,pcvf
 
 c        Resiual projection timings
          pproj=tproj/tttstp
-         write(6,*) 'proj time',0,tproj,pproj
+         write(6,*) 'proj time',tproj,pproj
 
 c        Variable properties timings
          pspro=tspro/tttstp
@@ -1303,6 +1087,10 @@ c        USERBC timings
          write(6,*) 'usbc min ',min_usbc 
          write(6,*) 'usbc max ',max_usbc 
          write(6,*) 'usb  avg ',avg_usbc 
+
+c        User check timings
+         puchk=tuchk/tttstp
+         write(6,*) 'uchk time',tuchk,puchk
 
 c        Operator timings
          pmltd=tmltd/tttstp
@@ -1365,61 +1153,29 @@ c         pdsmn=tdsmn/tttstp
 c         write(6,*) 'dsmn time',ndsmn,tdsmn,pdsmn
 c         pslvb=tslvb/tttstp
 c         write(6,*) 'slvb time',nslvb,tslvb,pslvb
+
          pddsl=tddsl/tttstp
          write(6,*) 'ddsl time',nddsl,tddsl,pddsl
-c
-c          pbsol=tbsol/tttstp
+
+c         pbsol=tbsol/tttstp
 c         write(6,*) 'bsol time',nbsol,tbsol,pbsol
 c         pbso2=tbso2/tttstp
 c         write(6,*) 'bso2 time',nbso2,tbso2,pbso2
 
-#ifdef MPITIMER
-         write(6,'(/,A)') 'MPI timings'
-c        MPI timings         
-         write(6,*) 'comm min ',min_comm
-         write(6,*) 'comm max ',max_comm 
-         write(6,*) 'comm avg ',avg_comm 
-         write(6,*) 'total comm %',max_comm/ttime
-
-c        MPI_Barrier timings
-         psyc=tsyc/tcomm
-         write(6,*) 'barrier time',nsyc,tsyc,psyc 
-         write(6,*) 'barrier min ',min_syc 
-         write(6,*) 'barrier max ',max_syc 
-         write(6,*) 'barrier avg ',avg_syc 
-
-c        MPI_Waitall timings
-         pwal=twal/tcomm
-         write(6,*) 'waitall time',nwal,twal,pwal 
-         write(6,*) 'waitall min ',min_wal 
-         write(6,*) 'waitall max ',max_wal 
-         write(6,*) 'waitall avg ',avg_wal 
-
-c        MPI_Allreduce timings
-         pgp2=tgp2/tcomm
-         write(6,*) 'allreduce  time',ngp2,tgp2,pgp2 
-         write(6,*) 'allreduce  min ',min_gop 
-         write(6,*) 'allreduce  max ',max_gop 
-         write(6,*) 'allreduce  avg ',avg_gop 
-
-c        MPI_Allreduce(sync) timings
-         pgop_sync=tgop_sync/tcomm
-         write(6,*) 'allreduce_sync  time',tgop_sync,pgop_sync 
-         write(6,*) 'allreduce_sync  min ',min_gop_sync 
-         write(6,*) 'allreduce_sync  max ',max_gop_sync 
-         write(6,*) 'allreduce_sync  avg ',avg_gop_sync 
-#endif
+         write(6,*) ''
       endif
 
-      if (nio.eq.0)  ! header for timing
-     $ write(6,1) 'tusbc','tdadd','tcrsl','tvdss','tdsum',' tgop',ifsync
-    1 format(/,'#',2x,'nid',6(7x,a5),4x,'qqq',1x,l4)
+      if (lastep.eq.1) then
+        if (nio.eq.0)  ! header for timing
+     $    write(6,1) 'tusbc','tdadd','tcrsl','tvdss','tdsum',
+     $               ' tgop',ifsync
+    1     format(/,'#',2x,'nid',6(7x,a5),4x,'qqq',1x,l4)
 
-      call blank(s132,132)
-      write(s132,132) nid,tusbc,tdadd,tcrsl,tvdss,tdsum,tgop
-  132 format(i12,1p6e12.4,' qqq')
-      call pprint_all(s132,132,6)
-
+        call blank(s132,132)
+        write(s132,132) nid,tusbc,tdadd,tcrsl,tvdss,tdsum,tgop
+  132   format(i12,1p6e12.4,' qqq')
+        call pprint_all(s132,132,6)
+      endif
 #endif
 
       return
@@ -1527,36 +1283,13 @@ c-----------------------------------------------------------------------
       subroutine dofcnt
       include 'SIZE'
       include 'TOTAL'
-      COMMON /SCRNS/ WORK(LCTMP1)
 
-      integer*8 i8glsum
-      integer*8 ntot,ntotp,ntotv, nn
-
-      nxyz  = lx1*ly1*lz1
-      nel   = nelv
-
-      ! unique points on v-mesh
-      vpts = glsum(vmult,nel*nxyz) + .1
-      nvtot=vpts
-
-      ! unique points on pressure mesh
-      work(1)=nel*nxyz
-      ppts = glsum(work,1) + .1
-      ntot=ppts
-C
-      if (nio.eq.0) write(6,'(A,2i13)') 
-     &   'gridpoints unique/tot: ',nvtot,ntot
+      integer*8 ntotv
 
       ntot1=lx1*ly1*lz1*nelv
-      ntot2=lx2*ly2*lz2*nelv
-
       ntotv = glsc2(tmult,tmask,ntot1)
-      nn = ntot2
-      ntotp = i8glsum(nn,1)
-
-      if (ifflow)  ntotv = glsc2(vmult,v1mask,ntot1)
-      if (ifsplit) ntotp = glsc2(vmult,pmask ,ntot1)
-      if (nio.eq.0) write(6,*) ' dofs:',ntotv,ntotp
+      if (ifflow) ntotv = glsc2(vmult,v1mask,ntot1)
+      if (nio.eq.0) write(6,*) 'dofs: ',ntotv
 
       return
       end
@@ -1637,7 +1370,8 @@ c     then recompute base flow solution corresponding to unit forcing:
          ifcomp=.false.  ! If here, then vdiff/vtrans unchanged.
    20    continue
       endif
-
+      call gllog(ifcomp,.true.)
+      
       call copy(vdc(1,1),vdiff (1,1,1,1,1),ntot1)
       call copy(vdc(1,2),vtrans(1,1,1,1,1),ntot1)
       dt_vflow = dt
@@ -1663,8 +1397,8 @@ c     in userf then the true FFX is given by ffx_userf + scale.
       scale = delta_flow/base_flow
       scale_vf(icvflow) = scale
       if (nio.eq.0) write(6,1) istep,chv(icvflow)
-     $   ,scale,delta_flow,current_flow,flow_rate
-    1    format(i11,'  volflow ',a1,11x,1p4e13.4)
+     $   ,time,scale,delta_flow,current_flow,flow_rate
+    1    format(i11,'  Volflow ',a1,11x,1p5e13.4)
 
       call add2s2(vx,vxc,scale,ntot1)
       call add2s2(vy,vyc,scale,ntot1)
@@ -1779,7 +1513,7 @@ c
       call rzero    (h2,ntot1)
 c
       call hmholtz  ('PRES',prc,respr,h1,h2,pmask,vmult,
-     $                             imesh,tolspl,nmxh,1)
+     $                             imesh,tolspl,nmxp,1)
       call ortho    (prc)
 C
 C     Compute velocity
@@ -1790,7 +1524,7 @@ C
 c
       intype = -1
       call sethlm   (h1,h2,intype)
-      call ophinv   (vxc,vyc,vzc,resv1,resv2,resv3,h1,h2,tolhv,nmxh)
+      call ophinv   (vxc,vyc,vzc,resv1,resv2,resv3,h1,h2,tolhv,nmxv)
 C
       return
       end
@@ -1843,7 +1577,7 @@ c
       endif
       intype = -1
       call sethlm   (h1,h2,intype)
-      call ophinv   (vxc,vyc,vzc,rw1,rw2,rw3,h1,h2,tolhv,nmxh)
+      call ophinv   (vxc,vyc,vzc,rw1,rw2,rw3,h1,h2,tolhv,nmxv)
       call ssnormd  (vxc,vyc,vzc)
 c
 c     Compute pressure  (from "incompr")
@@ -1913,7 +1647,7 @@ c     Compute pressure
       call ctolspl  (tolspl,respr)
 
       call hmholtz  ('PRES',prc,respr,h1,h2,pmask,vmult,
-     $                             imesh,tolspl,nmxh,1)
+     $                             imesh,tolspl,nmxp,1)
       call ortho    (prc)
 
 C     Compute velocity
@@ -1931,7 +1665,7 @@ C     Compute velocity
 
       intype = -1
       call sethlm   (h1,h2,intype)
-      call ophinv   (vxc,vyc,vzc,resv1,resv2,resv3,h1,h2,tolhv,nmxh)
+      call ophinv   (vxc,vyc,vzc,resv1,resv2,resv3,h1,h2,tolhv,nmxv)
 
       if (ifexplvis) call redo_split_vis ! restore vdiff
 
@@ -2016,3 +1750,31 @@ c     istpp = istep+2033+1250
       return
       end
 C-----------------------------------------------------------------------
+      subroutine prinit
+
+      include 'SIZE'
+      include 'TOTAL'
+
+      if(nio.eq.0) write(6,*) 'initialize pressure solver'
+      isolver = param(40)
+
+      if (isolver.eq.0) then      ! semg_xxt
+         if (nelgt.gt.350000)
+     $   call exitti('problem size too large for XXT solver!$',0)
+         call set_overlap
+      else if (isolver.eq.1) then ! semg_amg
+         call set_overlap
+      else if (isolver.eq.2) then ! semg_amg_hypre
+         call set_overlap
+      else if (isolver.eq.3) then ! fem_amg_hypre
+         null_space = 0
+         if (ifvcor) null_space = 1 
+         call fem_amg_setup(nx1,ny1,nz1,
+     $                      nelv,ndim,
+     $                      xm1,ym1,zm1,
+     $                      pmask,binvm1,null_space,
+     $                      gsh_fld(1),fem_amg_param)
+      endif
+
+      return 
+      end

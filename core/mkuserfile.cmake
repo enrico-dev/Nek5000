@@ -30,31 +30,117 @@ endif()
 # Add standard subroutines
 # =============================================================================
 
-if(NOT usr_str_lower MATCHES "subroutine.*usrsetvert")
-  string(CONCAT usr_str "${usr_str}" 
+if(NOT usr_str_lower MATCHES "subroutine.*uservp")
+  string(CONCAT usr_str "${usr_str}"
 "
-c automatically added by cmake
+c automatically added by makenek
+      subroutine uservp(ix,iy,iz,eg)
+
+      return
+      end
+")
+endif()
+
+if(NOT usr_str_lower MATCHES "subroutine.*userf")
+  string(CONCAT usr_str "${usr_str}"
+"
+c automatically added by makenek
+      subroutine userf(ix,iy,iz,eg)
+
+      return
+      end
+")
+endif()
+
+if(NOT usr_str_lower MATCHES "subroutine.*useric")
+  string(CONCAT usr_str "${usr_str}"
+"
+c automatically added by makenek
+      subroutine useric(ix,iy,iz,eg)
+
+      return
+      end
+")
+endif()
+
+if(NOT usr_str_lower MATCHES "subroutine.*userbc")
+  string(CONCAT usr_str "${usr_str}"
+"
+c automatically added by makenek
+      subroutine userbc(ix,iy,iz,iside,eg)
+
+      return
+      end
+")
+endif()
+
+if(NOT usr_str_lower MATCHES "subroutine.*userchk")
+  string(CONCAT usr_str "${usr_str}"
+"
+c automatically added by makenek
+      subroutine userchk()
+
+      return
+      end
+")
+endif()
+
+if(NOT usr_str_lower MATCHES "subroutine.*usrdat")
+  string(CONCAT usr_str "${usr_str}"
+"
+c automatically added by makenek
+      subroutine usrdat()
+
+      return
+      end
+")
+endif()
+
+if(NOT usr_str_lower MATCHES "subroutine.*usrdat2")
+  string(CONCAT usr_str "${usr_str}"
+"
+c automatically added by makenek
+      subroutine usrdat2()
+
+      return
+      end
+")
+endif()
+
+if(NOT usr_str_lower MATCHES "subroutine.*usrdat3")
+  string(CONCAT usr_str "${usr_str}"
+"
+c automatically added by makenek
+      subroutine usrdat3
+
+      return
+      end
+")
+endif()
+
+if(NOT usr_str_lower MATCHES "subroutine.*usrsetvert")
+  string(CONCAT usr_str "${usr_str}"
+"
+c automatically added by makenek
       subroutine usrsetvert(glo_num,nel,nx,ny,nz) ! to modify glo_num
       integer*8 glo_num(1)
 
       return
       end
-"
-  )
+")
 endif()
 
 if(NOT usr_str_lower MATCHES "subroutine.*userqtl")
-  string(CONCAT usr_str "${usr_str}" 
+  string(CONCAT usr_str "${usr_str}"
 "
-c automatically added by cmake
+c automatically added by makenek
       subroutine userqtl
 
       call userqtl_scig
 
       return
       end
-"
-  )
+")
 endif()
 
 # =============================================================================
@@ -92,84 +178,6 @@ c automatically added by makenek
 
 endif()
 
-# =============================================================================
-# Add CMT subroutines
-# =============================================================================
-
-if(CMT)
-
-  if(NOT usr_str_lower MATCHES "subroutine.*cmt_usrflt")
-    string(CONCAT usr_str "${usr_str}" 
-"
-c automatically added by makenek
-      subroutine cmt_usrflt(rmult) ! user defined filter
-      include 'SIZE'
-      real rmult(lx1)
-      call rone(rmult,lx1)
-      return
-      end
-"
-    )
-  endif()
-
-  if(NOT usr_str_lower MATCHES "subroutine.*cmt_userflux")
-    string(CONCAT usr_str "${usr_str}" 
-"
-c automatically added by makenek
-      subroutine cmt_userflux ! user defined flux
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      include 'CMTDATA'
-      real fluxout(lx1*lz1)
-      return
-      end
-"
-    )
-  endif()
-
-  if(NOT usr_str_lower MATCHES "subroutine.*cmt_usereos")
-    string(CONCAT usr_str "${usr_str}" 
-"
-c automatically added by makenek
-      subroutine cmt_userEOS ! user defined EOS 
-      include 'SIZE'
-      include 'TOTAL'
-      include 'NEKUSE'
-      include 'CMTDATA'
-
-      return
-      end
-"
-    )
-  endif()
-
-  # TODO: Define a full path relative to cmake build dir
-  if(EXISTS "cmtparticles.usrp")
-    message(STATUS "Particles found CMT")
-  else()
-    string(CONCAT usr_str "${usr_str}" 
-"
-c automatically added by makenek
-      subroutine usr_particles_init ! used for particles
-      return
-      end
-c
-c automatically added by makenek
-      subroutine usr_particles_solver ! used for particles
-      return
-      end
-c
-c automatically added by makenek
-      subroutine usr_particles_io(istep) ! used for particles
-      integer istep
-      return
-      end
-"
-    )
-  endif()
-
-endif() 
 
 # =============================================================================
 # Write .f file

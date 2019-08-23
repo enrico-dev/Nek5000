@@ -61,7 +61,7 @@ c
          intype = -1
          call sethlm   (h1,h2,intype)
          call cresvipp (resv1,resv2,resv3,h1,h2)
-         call ophinv   (dv1,dv2,dv3,resv1,resv2,resv3,h1,h2,tolhv,nmxh)
+         call ophinv   (dv1,dv2,dv3,resv1,resv2,resv3,h1,h2,tolhv,nmxv)
          call opadd2   (vxp(1,jp),vyp(1,jp),vzp(1,jp),dv1,dv2,dv3)
          call incomprp (vxp(1,jp),vyp(1,jp),vzp(1,jp),prp(1,jp))
 c
@@ -531,7 +531,7 @@ c
       call bcdirvc (vxp(1,jp),vyp(1,jp),vzp(1,jp)
      $             ,v1mask,v2mask,v3mask)
       call extrapprp(prextr)
-      call opgradt(resv1,resv2,resv3,prp(1,jp))
+      call opgradt(resv1,resv2,resv3,prextr)
       call opadd2(resv1,resv2,resv3,bfxp(1,jp),bfyp(1,jp),bfzp(1,jp))
       call ophx  (w1,w2,w3,vxp(1,jp),vyp(1,jp),vzp(1,jp),h1,h2)
       call opsub2(resv1,resv2,resv3,w1,w2,w3)
@@ -637,13 +637,7 @@ c
          CALL HMHOLTZ (name4t,TA,TB,H1,H2
      $                 ,TMASK(1,1,1,1,IFIELD-1)
      $                 ,TMULT(1,1,1,1,IFIELD-1)
-     $                 ,IMESH,TOLHT(IFIELD),NMXH,1)
-c
-c        call hsolve  (name4t,TA,TB,H1,H2 
-c    $                 ,TMASK(1,1,1,1,IFIELD-1)
-c    $                 ,TMULT(1,1,1,1,IFIELD-1)
-c    $                 ,IMESH,TOLHT(IFIELD),NMXH,1
-c    $                 ,approxt(1,0,ifld1),napproxt(1,ifld1),bintm1)
+     $                 ,IMESH,TOLHT(IFIELD),NMXT(ifield-1),1)
 c
          CALL ADD2    (TP(1,IFIELD-1,jp),TA,NTOT)
 C
