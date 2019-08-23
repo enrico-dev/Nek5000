@@ -2,8 +2,7 @@
 # Read SIZE file
 # =============================================================================
 
-file(READ SIZE size_str)
-file(WRITE SIZE.bk "${size_str}")
+file(READ ${INFILE_DIR}/SIZE size_str)
 string(TOLOWER "${size_str}" size_str_lower)
 
 # =============================================================================
@@ -132,4 +131,4 @@ c automatically added by cmake
 
 endif()
 
-file(WRITE SIZE "${size_str}")
+file(WRITE ${OUTFILE_DIR}/SIZE "${size_str}")

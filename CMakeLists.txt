@@ -80,6 +80,17 @@ ADD_CUSTOM_COMMAND(
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
+set(SIZE_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/SIZE)
+ADD_CUSTOM_COMMAND(
+    OUTPUT ${SIZE_SOURCE}
+    COMMAND ${CMAKE_COMMAND}
+    -DINFILE_DIR=${CASEDIR}
+    -DOUTFILE_DIR=${CMAKE_CURRENT_BINARY_DIR}
+    -P ${CMAKE_CURRENT_LIST_DIR}/core/mksizefile.cmake
+    DEPENDS ${CASEDIR}/SIZE
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
 set(CORE_SOURCES
     core/3rd_party/dictionary.c
     core/3rd_party/finiparser.c
@@ -151,6 +162,7 @@ set(CORE_SOURCES
     core/subs1.f
     core/subs2.f
     core/vprops.f
+    ${SIZE_SOURCE}
     )
 
 # TODO: Make mpif.h a proper dependency
@@ -214,7 +226,7 @@ add_library(libnek5000
     ${NEKNEK_SOURCES} ${COMM_MPI_SOURCES} ${CMT_SOURCES} ${VISIT_SOURCES})
 set_target_properties(libnek5000 PROPERTIES OUTPUT_NAME nek5000)
 target_include_directories(libnek5000 PUBLIC
-    ${CASEDIR} ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR} core core/3rd_party core/cmt
+    ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR} core core/3rd_party core/cmt
     core/experimental)
 
 # Driver
