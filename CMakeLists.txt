@@ -342,11 +342,12 @@ else()
 endif()
 
 foreach(target libnek5000 nek5000 genbox genmap gmsh2nek reatore2 re2torea)
-  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:>${fopts};${real8})
+  target_compile_options(${target} PRIVATE
+          $<$<COMPILE_LANGUAGE:Fortran>:${fopts};${real8}>)
 endforeach()
 
 foreach(target postx postex)
-  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:>${fopts})
+  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:Fortran>:${fopts}>)
 endforeach()
 
 # =============================================================================
