@@ -31,7 +31,7 @@ endif()
 # Tweak legacy SIZE files
 # =============================================================================
 
-if(NOT size_str_lower MATCHES "SIZE.inc")
+if(NOT size_str MATCHES "SIZE\\.inc")
   message(WARNING "Deprecated SIZE file will be unsupported in future release.")
 
   if(NOT size_str_lower MATCHES "optlevel")
