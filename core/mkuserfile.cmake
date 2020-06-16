@@ -85,6 +85,17 @@ c automatically added by makenek
 ")
 endif()
 
+if(NOT usr_str_lower MATCHES "subroutine.*usrdat0")
+  string(CONCAT usr_str "${usr_str}"
+"
+c automatically added by makenek
+      subroutine usrdat0()
+
+      return
+      end
+")
+endif()
+
 if(NOT usr_str_lower MATCHES "subroutine.*usrdat")
   string(CONCAT usr_str "${usr_str}"
 "
