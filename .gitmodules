@@ -7,4 +7,4 @@
 	url = https://github.com/Nek5000/NekExamples
 [submodule "3rd_party/hypre/hypre"]
 	path = 3rd_party/hypre/hypre
-	url = https://github.com/LLNL/hypre.git
+	url = https://github.com/hypre-space/hypre.git
