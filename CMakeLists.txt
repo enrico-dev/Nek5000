@@ -19,10 +19,12 @@ option(BGQ         "Use BGQ optimized mxm (default: OFF"              OFF)
 option(XSMM        "Use libxsmm for mxm (default: OFF)"               OFF)
 option(CVODE       "Enable CVODE support (default: OFF)"              OFF)
 option(HYPRE       "Enable HYPRE support (default: OFF)"              OFF)
-option(VENDOR_BLAS "Use VENDOR BLAS/LAPACK (default: OFF)"            OFF)
 option(DPROCMAP    "Use distributed processor mapping (default: OFF)" OFF)
 option(PARRSB      "Use online RSB partitioner (default: OFF)"        OFF)
 option(CMTNEK      "Use compressible solver (default: OFF)"           OFF)
+
+# From makenek.inc, but hardcoded here
+set(VENDOR_BLAS ON)
 
 if (NOT USR_LOC)
   set(USR_LOC "${CMAKE_BINARY_DIR}")
@@ -426,14 +428,12 @@ target_link_libraries(libnek5000 PUBLIC libgs)
 # BLAS/LAPACK
 # -----------------------------------------------------------------------------
 
-if(VENDOR_BLAS)
-  find_package(BLAS REQUIRED)
-  if(NOT BLAS_FOUND)
-    message(FATAL_ERROR "Could not find BLAS!")
-  endif()
+find_package(LAPACK REQUIRED)
+target_link_libraries(libnek5000 PRIVATE ${LAPACK_LIBRARIES})
+if (${CMAKE_VERSION} VERSION_LESS "3.13")
+  set_target_properties(libnek5000 PROPERTIES LINK_FLAGS ${LAPACK_LINKER_FLAGS})
 else()
-  add_subdirectory(3rd_party/blasLapack)
-  target_link_libraries(libnek5000 PRIVATE blasLapack)
+  target_link_options(libnek5000 PRIVATE ${LAPACK_LINKER_FLAGS})
 endif()
 
 # -----------------------------------------------------------------------------
