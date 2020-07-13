@@ -431,9 +431,9 @@ target_link_libraries(libnek5000 PUBLIC libgs)
 find_package(LAPACK REQUIRED)
 target_link_libraries(libnek5000 PRIVATE ${LAPACK_LIBRARIES})
 if (${CMAKE_VERSION} VERSION_LESS "3.13")
-  set_target_properties(libnek5000 PROPERTIES LINK_FLAGS ${LAPACK_LINKER_FLAGS})
+  set_target_properties(libnek5000 PROPERTIES LINK_FLAGS "${LAPACK_LINKER_FLAGS}")
 else()
-  target_link_options(libnek5000 PRIVATE ${LAPACK_LINKER_FLAGS})
+  target_link_options(libnek5000 PRIVATE "${LAPACK_LINKER_FLAGS}")
 endif()
 
 # -----------------------------------------------------------------------------
