@@ -155,6 +155,15 @@ void nek_step();
 
 //! Unimplemented. C2F_nek_end is used instead.
 void nek_finalize_step();
+
+//! Gets the value of iostep (interval to output fld file)
+//! \returns val Interval (number of timesteps) to output fld file
+int nek_get_iostep();
+
+//! Sets the value of iostep (timestep interval to output fld file)
+//! \param val Timestep interval to output fld file
+void nek_set_iostep(int val);
+
 };
 
 #endif // NEK5000_NEK_INTERFACE_H

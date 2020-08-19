@@ -249,6 +249,20 @@
           endif
         end function nek_set_heat_source
 
+        !> Gets the value of iostep (interval to output fld file)
+        !! \return Interval (number of timesteps) to output fld file
+        function nek_get_iostep() result(val) bind(C)
+          integer(C_INT) :: val
+          val = iostep
+        end function nek_get_iostep
+
+        !> Sets the value of iostep (interval to output fld file)
+        !! \param val Interval (number of timesteps) to output fld file
+        subroutine nek_set_iostep(val) bind(C)
+          integer(C_INT), value :: val
+          iostep = val
+        end subroutine nek_set_iostep
+
       end module nek_interface
 
       !> Get the heat source term for a given gridpoint
