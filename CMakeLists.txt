@@ -1,6 +1,28 @@
 cmake_minimum_required(VERSION 3.4 FATAL_ERROR)
 project(Nek5000 Fortran C)
 
+#===============================================================================
+# RPATH and install information
+#===============================================================================
+
+# This block of code ensures that dynamic libraries can be found via the RPATH
+# whether the executable is the original one from the build directory or the
+# installed one in CMAKE_INSTALL_PREFIX. Ref:
+# https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/RPATH-handling
+
+# use, i.e. don't skip the full RPATH for the build tree
+set(CMAKE_SKIP_BUILD_RPATH  FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 # =============================================================================
 # Configure options
 # =============================================================================
@@ -536,3 +558,23 @@ endif()
 #       ${VISIT_INSTALL}/libsim/V2/include/
 #       core/3rd_party/)
 # endif()
+
+#################################################################################
+# Install targets
+#################################################################################
+
+install(TARGETS 
+  nek5000 
+  libnek5000
+  #genbox
+  #gencon
+  #genmap
+  #gmsh2nek
+  #postx
+  #postex
+  #reatore2
+  #re2torea
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+)
