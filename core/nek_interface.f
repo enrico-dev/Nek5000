@@ -9,6 +9,7 @@
         include 'PARALLEL'
         include 'SOLN'
         include 'TSTEP'
+        include 'INPUT'
 
       contains
 
@@ -226,23 +227,36 @@
           c_nelt = nelt
         end function nek_get_nelt
 
+        !> Get the last dimension of the t array
+        function nek_get_ldimt() result(c_ldimt) bind(C)
+          integer(C_INT) :: c_ldimt
+          c_ldimt = ldimt
+        end function nek_get_ldimt
+
+        !> Get the number of passive scalars used at runtime
+        function nek_get_npscal() result(c_npscal) bind(C)
+          integer(C_INT) :: c_npscal
+          c_npscal = npscal
+        end function nek_get_npscal
+
         !> Set the heat source term in local heat array
-        !!
-        !! The units of heat must match on the unit system that was used
-        !! to setup the Nek5000 problem. The caller must handle any
-        !! necessary conversions.
-        !!
-        !! \param local_elem A local element ID
-        !! \param heat The non-dimensional heat source term
-        !! \return Error code
+        !>
+        !> The units of heat must match on the unit system that was used
+        !> to setup the Nek5000 problem. The caller must handle any
+        !> necessary conversions.
+        !>
+        !> Assumes that localq is stored as the last passive scalar
+        !>
+        !> \param local_elem A local element ID
+        !> \param heat The non-dimensional heat source term
+        !> \return Error code
         function nek_set_heat_source(local_elem, heat)
      &      result(ierr) bind(C)
           integer(C_INT), value :: local_elem
           real(C_DOUBLE), value :: heat
           integer(C_INT) :: ierr
-          include 'STREAM'
           if (local_elem <= nelt) then
-            localq(local_elem) = heat
+            t(:,:,:,local_elem,ldimt) = heat
             ierr = 0
           else
             ierr = 1
@@ -251,10 +265,23 @@
 
       end module nek_interface
 
+      !> Outputs .fld file including local heat
+      !>
+      !> Local heat is the last passive scalar.
+      subroutine nek_write_step() bind(C)
+        include 'SIZE'
+        include 'INPUT'
+        logical :: temp
+        temp = ifpsco(ldimt-1)
+        ifpsco(ldimt-1) = .true.
+        call prepost (.true.,'his')
+        ifpsco(ldimt-1) = temp
+      end subroutine nek_write_step
+
       !> Get the heat source term for a given gridpoint
       !!
-      !! This is called in Nek5000.  It returns the heat source term
-      !! from the local heat array, localq
+      !! Assumes that the heat source is the last
+      !! passive scalar
       !!
       !! \param ix x-index of GLL gridpoint
       !! \param iy y-index of GLL gridpoint
@@ -264,10 +291,9 @@
         include 'SIZE'
         include 'TOTAL'
         include 'NEKUSE'
-        include 'STREAM'
 
         integer ix, iy, iz, eg, local_elem
 
         local_elem = gllel(eg)
-        qvol = localq(local_elem)
+        qvol = t(ix,iy,iz,local_elem,ldimt)
       end

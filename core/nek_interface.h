@@ -121,6 +121,14 @@ int nek_get_nelt();
 //! \return  nelgt The number of global elements
 int nek_get_nelgt();
 
+//! Get ldimt, the last dimension of the t array
+//! \return  ldimt The last dimension of the t array
+int nek_get_ldimt();
+
+//! Get ldimt, the number of non-temperature passive scalars used at runtime.
+//! \return  ldimt The number of non-temperature passive scalars
+int nek_get_npscal();
+
 //! Return true if a global element is in a given MPI rank
 //! \param A global element ID
 //! \param An MPI rank
@@ -147,14 +155,9 @@ int nek_global_elem_is_in_fluid(int global_elem);
 //! \return Error code
 int nek_set_heat_source(int local_elem, double heat);
 
-//! Unimplemented.  C2F_nek_init is used instead.
-void nek_init_step();
+//! Outputs .fld file with localq
+void nek_write_step();
 
-//! Unimplemented. C2F_nek_solve is used instead.
-void nek_step();
-
-//! Unimplemented. C2F_nek_end is used instead.
-void nek_finalize_step();
 };
 
 #endif // NEK5000_NEK_INTERFACE_H
