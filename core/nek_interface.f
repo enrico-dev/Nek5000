@@ -266,16 +266,24 @@
       end module nek_interface
 
       !> Outputs .fld file including local heat
-      !>
-      !> Local heat is the last passive scalar.
-      subroutine nek_write_step() bind(C)
+      !!
+      !! Local heat is the last passive scalar.
+      !!
+      !! \param output_heat_source If true, output heat source to fld file
+      subroutine nek_write_step(output_heat_source) bind(C)
+        use iso_c_binding, only: C_INT
         include 'SIZE'
         include 'INPUT'
+        integer(C_INT), value :: output_heat_source
         logical :: temp
-        temp = ifpsco(ldimt-1)
-        ifpsco(ldimt-1) = .true.
+        if (output_heat_source /= 0) then
+          temp = ifpsco(ldimt-1)
+          ifpsco(ldimt-1) = .true.
+        endif
         call prepost (.true.,'his')
-        ifpsco(ldimt-1) = temp
+        if (output_heat_source /= 0) then
+          ifpsco(ldimt-1) = temp
+        endif
       end subroutine nek_write_step
 
       !> Get the heat source term for a given gridpoint

@@ -155,8 +155,10 @@ int nek_global_elem_is_in_fluid(int global_elem);
 //! \return Error code
 int nek_set_heat_source(int local_elem, double heat);
 
-//! Outputs .fld file with localq
-void nek_write_step();
+//! Outputs field file
+//!
+//! \param output_heat_source If true, output local heat source to field file
+void nek_write_step(int output_heat_source);
 
 };
 
